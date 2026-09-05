@@ -5,7 +5,7 @@ Purpose-bound, single-use proof-of-work challenges with a server-measured dwell 
 No dependencies. Node 18+.
 
 ```bash
-npm install @weggle/pow-gate
+npm install @weggle-co/pow-gate
 ```
 
 ## What it is for
@@ -19,7 +19,7 @@ This is small on purpose. It issues a token, checks a solution, and refuses to l
 ## Quick start
 
 ```js
-const { createPowGate } = require('@weggle/pow-gate');
+const { createPowGate } = require('@weggle-co/pow-gate');
 
 const gate = createPowGate({
   secret: process.env.POW_SECRET,   // required, 16+ chars
@@ -101,8 +101,8 @@ gate.verifyAndConsume(token, nonce);   // → { ok: false, reason: 'already used
 |---|---|
 | `issue(purpose)` | `{ token, difficulty, purpose, expiryMs }` |
 | `verify(token, nonce, opts)` | `{ ok, reason?, issuedAt?, age?, purpose?, difficulty? }` — does **not** spend the token |
-| `consume(token)` | `boolean` — `false` if already spent |
-| `verifyAndConsume(token, nonce, opts)` | verify then consume; what a handler usually wants |
+| `consume(token)` | `boolean` — `false` if already spent (a promise, if the store is async) |
+| `verifyAndConsume(token, nonce, opts)` | verify then consume; what a handler usually wants (a promise, if the store is async) |
 | `age(token)` | ms since issue, or `null` |
 | `solve(token)` | a valid nonce — for tests and server-side clients |
 | `takeAttempt(key)` | `boolean` — the optional attempt cap |
@@ -117,7 +117,7 @@ Call `verify` before `consume` — never record a token that has not verified, o
 
 The default store is an in-process `Map`. It is bounded (a token is only recorded once its proof verified, and entries are pruned at expiry) but it is **per process**. Behind a load balancer, a solved challenge can be spent once per instance.
 
-Pass a shared store — anything with `add(token, expiresAt) → boolean` and `has(token) → boolean`, where `add` returns `false` if the token was already present:
+Pass a shared store — anything with `add(token, expiresAt) → boolean` and `has(token) → boolean`, where `add` returns `false` if the token was already present. Either method may return a promise:
 
 ```js
 const gate = createPowGate({
@@ -133,6 +133,20 @@ const gate = createPowGate({
 ```
 
 Redis `SET NX` is exactly the right primitive: it is atomic, so two instances racing on the same token cannot both win.
+
+**Await the result when your store is asynchronous.** `verifyAndConsume` and `consume` answer in whatever form the store does — a plain value for the built-in store, a promise for one backed by a network call. Awaiting is safe in both cases, so a handler that always awaits works with either store:
+
+```js
+app.post('/register', async (req, res) => {
+  const result = await gate.verifyAndConsume(req.body.powToken, req.body.powNonce, {
+    purpose: 'register',
+  });
+  if (!result.ok) return res.status(400).send(`Rejected: ${result.reason}`);
+  // ...create the account
+});
+```
+
+Forgetting the `await` here is the one mistake worth guarding against: a promise is always truthy, so the replay check would pass every time and the single-use property would be lost without any error.
 
 The same applies to `rateLimit`, which is also per-process. If you need a shared attempt cap, use your existing rate limiter rather than this one.
 
@@ -150,7 +164,7 @@ Use it as one layer. It pairs well with a request rate limit and ordinary server
 npm test
 ```
 
-30 tests, written against the properties rather than the happy path: tokens signed with another key, every signed field tampered with in turn, solutions moved between flows, replays, expiry, future timestamps, malformed input, and the store seam.
+34 tests, written against the properties rather than the happy path: tokens signed with another key, every signed field tampered with in turn, solutions moved between flows, replays, expiry, future timestamps, malformed input, and the store seam — synchronous and asynchronous alike.
 
 ## License
 

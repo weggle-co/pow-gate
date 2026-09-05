@@ -316,3 +316,63 @@ test('every challenge is unique', () => {
   const tokens = new Set(Array.from({ length: 200 }, () => g.issue('register').token));
   assert.equal(tokens.size, 200);
 });
+
+// ── a shared store, which answers asynchronously ────────────────────────────
+
+/** Stands in for Redis SET NX: atomic, and it answers with a promise. */
+function asyncStore() {
+  const held = new Map();
+  return {
+    async add(token, expiresAt) {
+      if (held.has(token)) return false;
+      held.set(token, expiresAt);
+      return true;
+    },
+    async has(token) { return held.has(token); },
+    get size() { return held.size; },
+  };
+}
+
+test('an async store still blocks a replay', async () => {
+  const g = createPowGate({ secret: SECRET, difficulty: 2, store: asyncStore() });
+  const { token } = g.issue('register');
+  const nonce = g.solve(token);
+
+  const first = await g.verifyAndConsume(token, nonce, { purpose: 'register' });
+  assert.equal(first.ok, true);
+
+  // The bug this guards: add() returns a promise, and a promise is truthy, so
+  // a boolean test on it reports every replay as a fresh spend.
+  const replay = await g.verifyAndConsume(token, nonce, { purpose: 'register' });
+  assert.equal(replay.ok, false);
+  assert.equal(replay.reason, 'already used');
+});
+
+test('an async store does not swallow a failed verification', async () => {
+  const g = createPowGate({ secret: SECRET, difficulty: 2, store: asyncStore() });
+  const { token } = g.issue('register');
+  // A wrong nonce must be refused before the store is ever asked, so this
+  // result is plain rather than a promise.
+  const result = g.verifyAndConsume(token, 'not-a-solution', { purpose: 'register' });
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'proof of work failed');
+});
+
+test('a synchronous store stays synchronous', () => {
+  // Callers written against the built-in store must not have to await, or the
+  // replay check would silently pass for every one of them.
+  const g = gate();
+  const { token } = g.issue('register');
+  const nonce = g.solve(token);
+
+  const first = g.verifyAndConsume(token, nonce, { purpose: 'register' });
+  assert.equal(first.ok, true, 'a sync store must return a plain result');
+  assert.equal(g.verifyAndConsume(token, nonce, { purpose: 'register' }).reason, 'already used');
+});
+
+test('consume reports a duplicate through an async store too', async () => {
+  const g = createPowGate({ secret: SECRET, difficulty: 2, store: asyncStore() });
+  const { token } = g.issue('register');
+  assert.equal(await g.consume(token), true);
+  assert.equal(await g.consume(token), false);
+});

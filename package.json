@@ -1,8 +1,13 @@
 {
-  "name": "@weggle/pow-gate",
+  "name": "@weggle-co/pow-gate",
   "version": "1.0.0",
   "description": "Purpose-bound, single-use proof-of-work challenges with a server-measured dwell time. Stateless tokens, no default secret.",
+  "type": "commonjs",
   "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
   "files": ["index.js", "lib/", "README.md", "LICENSE"],
   "scripts": {
     "test": "node --test test/*.test.js"
@@ -17,5 +22,5 @@
   "bugs": { "url": "https://github.com/weggle-co/pow-gate/issues" },
   "homepage": "https://github.com/weggle-co/pow-gate#readme",
   "engines": { "node": ">=18" },
-  "dependencies": {}
+  "publishConfig": { "access": "public" }
 }
