@@ -1,0 +1,21 @@
+{
+  "name": "@weggle/pow-gate",
+  "version": "1.0.0",
+  "description": "Purpose-bound, single-use proof-of-work challenges with a server-measured dwell time. Stateless tokens, no default secret.",
+  "main": "index.js",
+  "files": ["index.js", "lib/", "README.md", "LICENSE"],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": [
+    "proof-of-work", "pow", "bot", "anti-bot", "rate-limit", "captcha",
+    "registration", "hashcash", "spam"
+  ],
+  "author": "supex <help@swagpex.net>",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/weggle-co/pow-gate.git" },
+  "bugs": { "url": "https://github.com/weggle-co/pow-gate/issues" },
+  "homepage": "https://github.com/weggle-co/pow-gate#readme",
+  "engines": { "node": ">=18" },
+  "dependencies": {}
+}
