@@ -5,7 +5,7 @@ Purpose-bound, single-use proof-of-work challenges with a server-measured dwell 
 No dependencies. Node 18+.
 
 ```bash
-npm install @weggle-co/pow-gate
+npm install @weggle/pow-gate
 ```
 
 ## What it is for
@@ -19,7 +19,7 @@ This is small on purpose. It issues a token, checks a solution, and refuses to l
 ## Quick start
 
 ```js
-const { createPowGate } = require('@weggle-co/pow-gate');
+const { createPowGate } = require('@weggle/pow-gate');
 
 const gate = createPowGate({
   secret: process.env.POW_SECRET,   // required, 16+ chars

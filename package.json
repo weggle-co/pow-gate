@@ -1,5 +1,5 @@
 {
-  "name": "@weggle-co/pow-gate",
+  "name": "@weggle/pow-gate",
   "version": "1.0.0",
   "description": "Purpose-bound, single-use proof-of-work challenges with a server-measured dwell time. Stateless tokens, no default secret.",
   "type": "commonjs",
